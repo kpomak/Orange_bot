@@ -17,7 +17,7 @@ logging.basicConfig(
     format="%(filename)s:%(lineno)d:%(levelname)s:[%(asctime)s] - %(name)s - %(message)s",
 )
 
-# Initialize bot and dispatcher
+# Initialize bot, storage and dispatcher
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
