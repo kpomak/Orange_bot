@@ -1,57 +1,78 @@
 from typing import List, Optional
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 from sqlalchemy import ForeignKey, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
-class Base(DeclarativeBase):
-    pass
+from config import ENGINE
 
 
-class User(Base):
-    __tablename__ = "user_accounts"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(64))
+class DBase:
+    class Base(DeclarativeBase):
+        pass
 
-    fullname: Mapped[Optional[str]]
-    addresses: Mapped[List["Address"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
-    )
+    class User(Base):
+        __tablename__ = "user"
+        id: Mapped[int] = mapped_column(primary_key=True)
+        username: Mapped[str] = mapped_column(String(255))
+        first_name: Mapped[Optional[str]]
+        last_name: Mapped[Optional[str]]
+        authors: Mapped[List[lambda: DBase.Author]] = relationship(
+            back_populates="user", cascade="all, delete-orphan"
+        )
 
-    def __repr__(self) -> str:
-        return f"User(id={self.id!r}, fullname={self.fullname!r})"
+        def __repr__(self) -> str:
+            return f"User(id={self.id}, username={self.username})"
 
+    class Author(Base):
+        __tablename__ = "authors"
+        id: Mapped[int] = mapped_column(primary_key=True)
+        username: Mapped[str] = mapped_column(String(127))
+        subscripter: Mapped[int] = mapped_column(ForeignKey("user.id"))
+        user: Mapped[lambda: DBase.User] = relationship(back_populates="authors")
+        repos: Mapped[List[lambda: DBase.Repo]] = relationship(
+            back_populates="author", cascade="all, delete-orphan"
+        )
 
-class Address(Base):
-    __tablename__ = "address"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    email_address: Mapped[str]
-    user_id: Mapped[int] = mapped_column(ForeignKey("user_account.id"))
-    user: Mapped["User"] = relationship(back_populates="addresses")
+        def __repr__(self) -> str:
+            return f"Author(id={self.id}, username={self.username})"
 
-    def __repr__(self) -> str:
-        return f"Address(id={self.id!r}, email_address={self.email_address!r})"
+    class Repo(Base):
+        __tablename__ = "repositories"
+        id: Mapped[int] = mapped_column(primary_key=True)
+        owner: Mapped[lambda: DBase.Author] = mapped_column(ForeignKey("authors.id"))
+        name: Mapped[str]
+        url: Mapped[str]
+        updated_at: Mapped[datetime]
+        author: Mapped[lambda: DBase.Author] = relationship(back_populates="repos")
+
+        def __repr__(self) -> str:
+            return f"Repo(name={self.name}, updated={self.updated_at})"
+
+    def __init__(self) -> None:
+        self.engine = create_engine(**ENGINE)
+        self.Base.metadata.create_all(self.engine)
+
+    def add_user(self, kwargs):
+        with Session(self.engine) as session:
+            user = self.User(
+                id=kwargs.get("id"),
+                username=kwargs.get("username"),
+                first_name=kwargs.get("first_name"),
+                last_name=kwargs.get("last_name"),
+            )
+            session.add(user)
+            session.commit()
 
 
 if __name__ == "__main__":
-    engine = create_engine("sqlite:///db.sqlite3", echo=True)
-    Base.metadata.create_all(engine)
-
-    with Session(engine) as session:
-        spongebob = User(
-            name="spongebob",
-            fullname="Spongebob Squarepants",
-            addresses=[Address(email_address="spongebob@sqlalchemy.org")],
-        )
-        sandy = User(
-            name="sandy",
-            fullname="Sandy Cheeks",
-            addresses=[
-                Address(email_address="sandy@sqlalchemy.org"),
-                Address(email_address="sandy@squirrelpower.org"),
-            ],
-        )
-        patrick = User(name="patrick")
-        session.add_all([spongebob, sandy, patrick])
-        session.commit()
+    db = DBase()
+    roman = {
+        "id": 207,
+        "first_name": "Рома",
+        "last_name": "Рыжков",
+        "username": "Roma_Ryzhkov",
+        "type": "private",
+    }
+    db.add_user(roman)
