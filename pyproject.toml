@@ -13,6 +13,9 @@ aiogram = "2.25.1"
 python-dotenv = "1.0.0"
 black = "23.3.0"
 apscheduler = "3.10.1"
+sqlalchemy = "2.0.12"
+requests = "2.29.0"
+pygithub = "^1.58.1"
 
 
 [build-system]
