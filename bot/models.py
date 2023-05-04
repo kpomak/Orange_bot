@@ -2,7 +2,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from sqlalchemy.orm import Session
-from sqlalchemy import ForeignKey, String, create_engine
+from sqlalchemy import ForeignKey, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from bot.config import ENGINE
@@ -56,14 +56,18 @@ class DBase:
 
     def add_user(self, kwargs):
         with Session(self.engine) as session:
-            user = self.User(
-                id=kwargs.get("id"),
-                username=kwargs.get("username"),
-                first_name=kwargs.get("first_name"),
-                last_name=kwargs.get("last_name"),
-            )
-            session.add(user)
-            session.commit()
+            user = session.execute(
+                select(self.User).where(self.User.id == kwargs.get("id"))
+            ).first()
+            if not user:
+                user = self.User(
+                    id=kwargs.get("id"),
+                    username=kwargs.get("username"),
+                    first_name=kwargs.get("first_name"),
+                    last_name=kwargs.get("last_name"),
+                )
+                session.add(user)
+                session.commit()
 
 
 if __name__ == "__main__":
