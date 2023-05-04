@@ -8,7 +8,7 @@ async def main():
     sheduler.add_job(send_message_interval, "interval", seconds=10, args=(bot,))
 
     try:
-        sheduler.start()
+        # sheduler.start()
         await dp.start_polling()
     finally:
         await dp.storage.close()

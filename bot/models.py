@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import ForeignKey, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from config import ENGINE
+from bot.config import ENGINE
 
 
 class DBase:
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     roman = {
         "id": 207,
         "first_name": "Рома",
-        "last_name": "Рыжков",
+        "last_name": None,
         "username": "Roma_Ryzhkov",
         "type": "private",
     }
