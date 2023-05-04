@@ -6,6 +6,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from bot.models import DBase
 
 load_dotenv()
 
@@ -17,19 +18,23 @@ logging.basicConfig(
     format="%(filename)s:%(lineno)d:%(levelname)s:[%(asctime)s] - %(name)s - %(message)s",
 )
 
-# Initialize bot, storage and dispatcher
+# Initialize bot, storage, database and dispatcher
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
+db = DBase()
 sheduler = AsyncIOScheduler()
 
 
 @dp.message_handler(commands=["start"])
-async def send_welcome(message: types.Message):
+async def send_welcome(message: types.Message, db=db):
     """
     This handler will be called when user sends `/start` command
     """
-    await message.reply("Hi!\nI'm OrangeBot!\nPowered by aiogram.")
+    db.add_user(message.from_user.values)
+    await message.reply(
+        "Hi!\nI'm OrangeBot!\nNow you can subscribe to Github users repo updates"
+    )
 
 
 @dp.message_handler()
