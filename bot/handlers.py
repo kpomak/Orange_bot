@@ -18,7 +18,7 @@ async def send_welcome(message: types.Message, db=db):
     """
     This handler will be called when user sends `/start` command
     """
-    db.add_user(message.from_user.values)
+    db.add_user(**message.from_user.values)
     await message.reply(
         f"Hi!\nI'm OrangeBot! 🍊\n"
         f"Now you can subscribe to updates of Github users 🙌\n"

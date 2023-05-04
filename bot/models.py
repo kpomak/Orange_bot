@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import ForeignKey, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from bot.config import ENGINE
+from config import ENGINE
+from git_api import get_authors_repos
 
 
 class DBase:
@@ -29,7 +30,7 @@ class DBase:
         __tablename__ = "authors"
         id: Mapped[int] = mapped_column(primary_key=True)
         username: Mapped[str] = mapped_column(String(127))
-        subscripter: Mapped[int] = mapped_column(ForeignKey("user.id"))
+        subscriber: Mapped[int] = mapped_column(ForeignKey("user.id"))
         user: Mapped[lambda: DBase.User] = relationship(back_populates="authors")
         repos: Mapped[List[lambda: DBase.Repo]] = relationship(
             back_populates="author", cascade="all, delete-orphan"
@@ -54,11 +55,23 @@ class DBase:
         self.engine = create_engine(**ENGINE)
         self.Base.metadata.create_all(self.engine)
 
-    def add_user(self, kwargs):
+    def get_user(self, **kwargs):
         with Session(self.engine) as session:
-            user = session.execute(
-                select(self.User).where(self.User.id == kwargs.get("id"))
-            ).first()
+            return session.get(self.User, kwargs.get("id"))
+
+    # def get_author(self, **kwargs):
+    #     with Session(self.engine) as session:
+    #         author = session.execute(
+    #             select(self.Author)
+    #             .join(self.User.authors)
+    #             .where(self.User.id == kwargs.get("id"))
+    #             .where(self.Author.username == kwargs.get("author_username"))
+    #         ).first()
+    #         return author
+
+    def add_user(self, **kwargs):
+        with Session(self.engine) as session:
+            user = self.get_user(**kwargs)
             if not user:
                 user = self.User(
                     id=kwargs.get("id"),
@@ -68,6 +81,30 @@ class DBase:
                 )
                 session.add(user)
                 session.commit()
+
+    def sudscribe_on_author(self, **kwargs):
+        with Session(self.engine) as session:
+            user = self.get_user(**kwargs)
+            if not user:
+                return
+
+            author = self.Author(
+                username=kwargs.get("author_username"),
+                subscriber=user.id,
+            )
+            session.add(author)
+            session.flush()
+
+            repos = get_authors_repos(author.username)
+            for item in repos:
+                repo = self.Repo(
+                    owner=author.id,
+                    name=item.get("name"),
+                    url=item.get("url"),
+                    updated_at=item.get("updated_at"),
+                )
+                author.repos.append(repo)
+            session.commit()
 
 
 if __name__ == "__main__":
@@ -79,4 +116,6 @@ if __name__ == "__main__":
         "username": "Roma_Ryzhkov",
         "type": "private",
     }
-    db.add_user(roman)
+    db.add_user(**roman)
+    user = db.get_user(**roman)
+    db.sudscribe_on_author(author_username="kpomak", **roman)
