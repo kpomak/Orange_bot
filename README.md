@@ -1,2 +1,2 @@
 # Orange_bot
-🍊 a bot who surfs the Internet instead of me 🍊
+🍊 Subsribe and follow Github users activity 🍊
