@@ -2,7 +2,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from sqlalchemy.orm import Session
-from sqlalchemy import ForeignKey, String, create_engine, select
+from sqlalchemy import ForeignKey, Column, Table, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from config import ENGINE
@@ -13,14 +13,22 @@ class DBase:
     class Base(DeclarativeBase):
         pass
 
+    association_table = Table(
+        "users_authors",
+        Base.metadata,
+        Column("user", ForeignKey("users.id"), primary_key=True),
+        Column("author", ForeignKey("authors.id"), primary_key=True),
+    )
+
     class User(Base):
-        __tablename__ = "user"
+        __tablename__ = "users"
         id: Mapped[int] = mapped_column(primary_key=True)
         username: Mapped[str] = mapped_column(String(255))
         first_name: Mapped[Optional[str]]
         last_name: Mapped[Optional[str]]
+
         authors: Mapped[List[lambda: DBase.Author]] = relationship(
-            back_populates="user", cascade="all, delete-orphan"
+            secondary=lambda: DBase.association_table, back_populates="users"
         )
 
         def __repr__(self) -> str:
@@ -29,9 +37,11 @@ class DBase:
     class Author(Base):
         __tablename__ = "authors"
         id: Mapped[int] = mapped_column(primary_key=True)
-        username: Mapped[str] = mapped_column(String(127))
-        subscriber: Mapped[int] = mapped_column(ForeignKey("user.id"))
-        user: Mapped[lambda: DBase.User] = relationship(back_populates="authors")
+        username: Mapped[str] = mapped_column(String(127), unique=True)
+
+        users: Mapped[Optional[lambda: DBase.User]] = relationship(
+            secondary=lambda: DBase.association_table, back_populates="authors"
+        )
         repos: Mapped[List[lambda: DBase.Repo]] = relationship(
             back_populates="author", cascade="all, delete-orphan"
         )
@@ -59,15 +69,14 @@ class DBase:
         with Session(self.engine) as session:
             return session.get(self.User, kwargs.get("id"))
 
-    # def get_author(self, **kwargs):
-    #     with Session(self.engine) as session:
-    #         author = session.execute(
-    #             select(self.Author)
-    #             .join(self.User.authors)
-    #             .where(self.User.id == kwargs.get("id"))
-    #             .where(self.Author.username == kwargs.get("author_username"))
-    #         ).first()
-    #         return author
+    def get_author(self, **kwargs):
+        with Session(self.engine) as session:
+            author = session.scalars(
+                select(self.Author).where(
+                    self.Author.username == kwargs.get("author_username")
+                )
+            ).one()
+            return author
 
     def add_user(self, **kwargs):
         with Session(self.engine) as session:
@@ -90,7 +99,6 @@ class DBase:
 
             author = self.Author(
                 username=kwargs.get("author_username"),
-                subscriber=user.id,
             )
             session.add(author)
             session.flush()
@@ -119,3 +127,5 @@ if __name__ == "__main__":
     db.add_user(**roman)
     user = db.get_user(**roman)
     db.sudscribe_on_author(author_username="kpomak", **roman)
+    author = db.get_author(author_username="kpomak")
+    print()
