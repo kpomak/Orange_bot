@@ -992,8 +992,6 @@ urllib3 = ">=1.21.1,<1.27"
 [package.extras]
 socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
-
-[[package]]
 name = "setuptools"
 version = "67.7.2"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"

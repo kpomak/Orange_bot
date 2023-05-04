@@ -8,7 +8,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.models import DBase
 
-
 load_dotenv()
 
 API_TOKEN = os.getenv("API_TOKEN")
