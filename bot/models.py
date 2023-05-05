@@ -75,7 +75,7 @@ class DBase:
                 select(self.Author).where(
                     self.Author.username == kwargs.get("author_username")
                 )
-            ).one()
+            ).first()
             return author
 
     def add_user(self, **kwargs):
@@ -97,21 +97,31 @@ class DBase:
             if not user:
                 return
 
-            author = self.Author(
-                username=kwargs.get("author_username"),
-            )
-            session.add(author)
-            session.flush()
+            session.add(user)
 
-            repos = get_authors_repos(author.username)
-            for item in repos:
-                repo = self.Repo(
-                    owner=author.id,
-                    name=item.get("name"),
-                    url=item.get("url"),
-                    updated_at=item.get("updated_at"),
+            author = self.get_author(**kwargs)
+            if author:
+                if any(map(lambda user: author.id == user.id, user.authors)):
+                    return
+
+            else:
+                author = self.Author(
+                    username=kwargs.get("author_username"),
                 )
-                author.repos.append(repo)
+                session.add(author)
+                session.flush()
+
+                repos = get_authors_repos(author.username)
+                for item in repos:
+                    repo = self.Repo(
+                        owner=author.id,
+                        name=item.get("name"),
+                        url=item.get("url"),
+                        updated_at=item.get("updated_at"),
+                    )
+                    author.repos.append(repo)
+
+            user.authors.append(author)
             session.commit()
 
 
@@ -128,4 +138,3 @@ if __name__ == "__main__":
     user = db.get_user(**roman)
     db.sudscribe_on_author(author_username="kpomak", **roman)
     author = db.get_author(author_username="kpomak")
-    print()
