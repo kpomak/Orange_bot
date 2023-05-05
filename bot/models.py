@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import ForeignKey, Column, Table, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from config import ENGINE
-from git_api import get_authors_repos
+from bot.config import ENGINE
+from bot.git_api import get_authors_repos
 
 
 class DBase:
