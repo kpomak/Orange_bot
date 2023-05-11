@@ -2,24 +2,33 @@ from typing import List, Optional
 from datetime import datetime
 
 from sqlalchemy.orm import Session
-from sqlalchemy import ForeignKey, String, create_engine
+from sqlalchemy import ForeignKey, Column, Table, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from bot.config import ENGINE
+from bot.git_api import get_authors_repos
 
 
 class DBase:
     class Base(DeclarativeBase):
         pass
 
+    association_table = Table(
+        "users_authors",
+        Base.metadata,
+        Column("user", ForeignKey("users.id"), primary_key=True),
+        Column("author", ForeignKey("authors.id"), primary_key=True),
+    )
+
     class User(Base):
-        __tablename__ = "user"
+        __tablename__ = "users"
         id: Mapped[int] = mapped_column(primary_key=True)
         username: Mapped[str] = mapped_column(String(255))
         first_name: Mapped[Optional[str]]
         last_name: Mapped[Optional[str]]
+
         authors: Mapped[List[lambda: DBase.Author]] = relationship(
-            back_populates="user", cascade="all, delete-orphan"
+            secondary=lambda: DBase.association_table, back_populates="users"
         )
 
         def __repr__(self) -> str:
@@ -28,9 +37,11 @@ class DBase:
     class Author(Base):
         __tablename__ = "authors"
         id: Mapped[int] = mapped_column(primary_key=True)
-        username: Mapped[str] = mapped_column(String(127))
-        subscripter: Mapped[int] = mapped_column(ForeignKey("user.id"))
-        user: Mapped[lambda: DBase.User] = relationship(back_populates="authors")
+        username: Mapped[str] = mapped_column(String(127), unique=True)
+
+        users: Mapped[Optional[lambda: DBase.User]] = relationship(
+            secondary=lambda: DBase.association_table, back_populates="authors"
+        )
         repos: Mapped[List[lambda: DBase.Repo]] = relationship(
             back_populates="author", cascade="all, delete-orphan"
         )
@@ -54,15 +65,63 @@ class DBase:
         self.engine = create_engine(**ENGINE)
         self.Base.metadata.create_all(self.engine)
 
-    def add_user(self, kwargs):
+    def get_user(self, **kwargs):
         with Session(self.engine) as session:
-            user = self.User(
-                id=kwargs.get("id"),
-                username=kwargs.get("username"),
-                first_name=kwargs.get("first_name"),
-                last_name=kwargs.get("last_name"),
-            )
+            return session.get(self.User, kwargs.get("id"))
+
+    def get_author(self, **kwargs):
+        with Session(self.engine) as session:
+            author = session.scalars(
+                select(self.Author).where(
+                    self.Author.username == kwargs.get("author_username")
+                )
+            ).first()
+            return author
+
+    def add_user(self, **kwargs):
+        with Session(self.engine) as session:
+            user = self.get_user(**kwargs)
+            if not user:
+                user = self.User(
+                    id=kwargs.get("id"),
+                    username=kwargs.get("username"),
+                    first_name=kwargs.get("first_name"),
+                    last_name=kwargs.get("last_name"),
+                )
+                session.add(user)
+                session.commit()
+
+    def sudscribe_on_author(self, **kwargs):
+        with Session(self.engine) as session:
+            user = self.get_user(**kwargs)
+            if not user:
+                return
+
             session.add(user)
+
+            author = self.get_author(**kwargs)
+            if author:
+                if any(map(lambda user: author.id == user.id, user.authors)):
+                    return
+
+            else:
+                author = self.Author(
+                    username=kwargs.get("author_username"),
+                )
+                session.add(author)
+                session.flush()
+
+                repos = get_authors_repos(author.username)
+                for item in repos:
+                    repo = self.Repo(
+                        owner=author.id,
+                        name=item.get("name"),
+                        url=item.get("url"),
+                        updated_at=item.get("updated_at"),
+                    )
+                    author.repos.append(repo)
+
+            user.authors.append(author)
             session.commit()
 
 
@@ -75,4 +134,7 @@ if __name__ == "__main__":
         "username": "Roma_Ryzhkov",
         "type": "private",
     }
-    db.add_user(roman)
+    db.add_user(**roman)
+    user = db.get_user(**roman)
+    db.sudscribe_on_author(author_username="kpomak", **roman)
+    author = db.get_author(author_username="kpomak")

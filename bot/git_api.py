@@ -3,8 +3,8 @@ from github import Github
 git = Github()
 
 
-def get_users_repos(user):
-    repos = git.get_user(user).get_repos()
+def get_authors_repos(username):
+    repos = git.get_user(username).get_repos()
     data = [
         {
             "name": repo.name,
@@ -19,4 +19,4 @@ def get_users_repos(user):
 if __name__ == "__main__":
     from pprint import pprint
 
-    pprint(get_users_repos("kpomak"))
+    pprint(get_authors_repos("kpomak"))
