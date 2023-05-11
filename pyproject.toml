@@ -16,6 +16,7 @@ apscheduler = "3.10.1"
 sqlalchemy = "2.0.12"
 requests = "2.29.0"
 pygithub = "1.58.1"
+psycopg2-binary = "^2.9.6"
 
 
 [build-system]
