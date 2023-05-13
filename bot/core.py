@@ -1,14 +1,16 @@
 import logging
 import os
 
-from aiogram import Bot, Dispatcher, executor, types
+from aiogram import Bot, Dispatcher, executor
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from dotenv import load_dotenv
+
+load_dotenv()
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.handlers import register_all_handlers
 
-load_dotenv()
 
 API_TOKEN = os.getenv("API_TOKEN")
 
