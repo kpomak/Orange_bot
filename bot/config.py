@@ -2,9 +2,13 @@ import os
 import logging
 
 
+USER = os.getenv("POSTGRES_USER")
+PASSWORD = os.getenv("POSTGRES_PASSWORD")
+
 # Database engine
 ENGINE = {
     "url": "sqlite:///db.sqlite3",
+    # "url": f"postgresql://{USER}:{PASSWORD}@db:5432/telebot",
     "echo": True,
 }
 
