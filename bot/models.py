@@ -124,6 +124,9 @@ class DBase:
             user.authors.append(author)
             session.commit()
 
+    def unsubscribe_author(self, **kwargs):
+        pass
+
 
 if __name__ == "__main__":
     db = DBase()
