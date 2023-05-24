@@ -124,7 +124,7 @@ class DBase:
             user.authors.append(author)
             session.commit()
 
-    def check_updates(self):
+    def unsubscribe_author(self, **kwargs):
         pass
 
 

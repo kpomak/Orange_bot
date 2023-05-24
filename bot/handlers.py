@@ -43,10 +43,11 @@ async def process_username(message: Message, state: FSMContext):
     Process username
     """
     async with state.proxy() as data:
-        data["autor_username"] = message.text
+        data["author_username"] = message.text
 
     await state.finish()
-    await message.reply(f"You have been subscribe to {data.as_dict()}")
+    db.sudscribe_on_author(**message.from_user.values, **data.as_dict())
+    await message.reply(f"You have been subscribe to {message.text}")
 
 
 async def echo(message: Message):
