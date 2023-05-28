@@ -5,6 +5,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from bot.models import DBase
 from bot.middleware import handle_file, transcript
+from utils.exceptions import AuthorNotFoundError
 
 db = DBase()
 
@@ -46,8 +47,12 @@ async def process_username(message: Message, state: FSMContext):
         data["author_username"] = message.text
 
     await state.finish()
-    db.sudscribe_on_author(**message.from_user.values, **data.as_dict())
-    await message.reply(f"You have been subscribe to {message.text}")
+    try:
+        db.sudscribe_on_author(**message.from_user.values, **data.as_dict())
+    except AuthorNotFoundError:
+        await message.reply(f"Github user {message.text} not found 👀")
+    else:
+        await message.reply(f"You have been subscribe to {message.text}")
 
 
 async def echo(message: Message):

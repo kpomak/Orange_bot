@@ -6,7 +6,9 @@ from sqlalchemy import ForeignKey, Column, Table, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from bot.config import ENGINE
-from bot.git_api import get_authors_repos
+from bot.git_api import get_authors_repos, get_author
+from github.GithubException import UnknownObjectException
+from utils.exceptions import AuthorNotFoundError
 
 
 class DBase:
@@ -105,24 +107,32 @@ class DBase:
                     return
 
             else:
-                author = self.Author(
-                    username=kwargs.get("author_username"),
-                )
-                session.add(author)
-                session.flush()
+                username = kwargs.get("author_username")
+                try:
+                    get_author(username)
+                except UnknownObjectException:
+                    raise AuthorNotFoundError
+                else:
+                    author = self.Author(username=username)
+                    session.add(author)
+                    session.flush()
 
-                repos = get_authors_repos(author.username)
-                for item in repos:
-                    repo = self.Repo(
-                        owner=author.id,
-                        name=item.get("name"),
-                        url=item.get("url"),
-                        updated_at=item.get("updated_at"),
-                    )
-                    author.repos.append(repo)
+                    self.set_repos(author)
 
             user.authors.append(author)
             session.commit()
+
+    def set_repos(self, author: Author):
+        author.repos.clear()
+        repos = get_authors_repos(author.username)
+        for item in repos:
+            repo = self.Repo(
+                owner=author.id,
+                name=item.get("name"),
+                url=item.get("url"),
+                updated_at=item.get("updated_at"),
+            )
+            author.repos.append(repo)
 
     def unsubscribe_author(self, **kwargs):
         pass
