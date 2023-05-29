@@ -5,6 +5,8 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from bot.models import DBase
 from bot.middleware import handle_file, transcript
+from utils.exceptions import AuthorNotFoundError
+from bot.keyboards import unsubscribe_keyboard
 
 db = DBase()
 
@@ -16,12 +18,22 @@ class Form(StatesGroup):
 
 async def subscribe_welcome(message: Message):
     """
-    Conversation's entry point
+    Conversation entry point
     """
     # Set state
     await Form.username.set()
     await message.reply(
-        f"Awesome! 🍊\nWhat's repo owner username?\n" f"Type /cancel for break!"
+        f"Awesome! 🍊\nWhat's repo owner username?\n Type /cancel for break!"
+    )
+
+
+async def unsubscribe_welcome(message: Message):
+    """
+    Conversation entry point
+    """
+    await message.reply(
+        f"Awesome! 🍊\nWhat's repo owner username?\n",
+        reply_markup=unsubscribe_keyboard(db, **message.from_user.values),
     )
 
 
@@ -46,9 +58,14 @@ async def process_username(message: Message, state: FSMContext):
         data["author_username"] = message.text
 
     await state.finish()
-    db.sudscribe_on_author(**message.from_user.values, **data.as_dict())
-    await message.reply(f"You have been subscribe to {message.text}")
 
+    try:
+        db.sudscribe_on_author(**message.from_user.values, **data.as_dict())
+    except AuthorNotFoundError:
+        await message.reply(f"Github user {message.text} not found 👀")
+    else:
+        await message.reply(f"You have been subscribe to {message.text}")
+        
 
 async def echo(message: Message):
     """
@@ -95,6 +112,7 @@ async def send_help(message: Message):
 
 def register_all_handlers(dp: Dispatcher):
     dp.register_message_handler(subscribe_welcome, commands=["subscribe"])
+    dp.register_message_handler(unsubscribe_welcome, commands=["unsubscribe"])
     dp.register_message_handler(voicy, content_types=["voice"])
     dp.register_message_handler(cancel_handler, state="*", commands=["cancel"])
     dp.register_message_handler(process_username, state=Form.username)

@@ -1,7 +1,7 @@
 import asyncio
 
 from bot.core import dp, bot, sheduler
-from bot.ap_shedule import send_message_interval
+from utils.ap_shedule import send_message_interval
 
 
 async def main():

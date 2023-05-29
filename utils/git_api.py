@@ -16,6 +16,11 @@ def get_authors_repos(username):
     return data
 
 
+def get_author(username):
+    author = git.get_user(username)
+    return author
+
+
 if __name__ == "__main__":
     from pprint import pprint
 

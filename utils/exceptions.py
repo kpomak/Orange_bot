@@ -1,0 +1,2 @@
+class AuthorNotFoundError(Exception):
+    pass
