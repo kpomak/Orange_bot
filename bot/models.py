@@ -6,7 +6,7 @@ from sqlalchemy import ForeignKey, Column, Table, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from bot.config import ENGINE
-from bot.git_api import get_authors_repos, get_author
+from utils.git_api import get_authors_repos, get_author
 from github.GithubException import UnknownObjectException
 from utils.exceptions import AuthorNotFoundError
 
@@ -134,8 +134,17 @@ class DBase:
             )
             author.repos.append(repo)
 
+    def get_authors(self, **kwargs):
+        with Session(self.engine) as session:
+            user = self.get_user(**kwargs)
+            return user.authors
+
     def unsubscribe_author(self, **kwargs):
-        pass
+        with Session(self.engine) as session:
+            author = self.get_author(**kwargs)
+            user = self.get_user(**kwargs)
+            user.authors.remove(author)
+            session.commit()
 
 
 if __name__ == "__main__":
@@ -151,3 +160,4 @@ if __name__ == "__main__":
     user = db.get_user(**roman)
     db.sudscribe_on_author(author_username="kpomak", **roman)
     author = db.get_author(author_username="kpomak")
+    db.unsubscribe_author(author_username="kpomak", **roman)
