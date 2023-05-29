@@ -58,13 +58,14 @@ async def process_username(message: Message, state: FSMContext):
         data["author_username"] = message.text
 
     await state.finish()
+
     try:
         db.sudscribe_on_author(**message.from_user.values, **data.as_dict())
     except AuthorNotFoundError:
         await message.reply(f"Github user {message.text} not found 👀")
     else:
         await message.reply(f"You have been subscribe to {message.text}")
-
+        
 
 async def echo(message: Message):
     """
