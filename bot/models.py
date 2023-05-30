@@ -67,22 +67,20 @@ class DBase:
         self.engine = create_engine(**ENGINE)
         self.Base.metadata.create_all(self.engine)
 
-    def get_user(self, **kwargs):
-        with Session(self.engine) as session:
-            return session.get(self.User, kwargs.get("id"))
+    def get_user(self, session, **kwargs):
+        return session.get(self.User, kwargs.get("id"))
 
-    def get_author(self, **kwargs):
-        with Session(self.engine) as session:
-            author = session.scalars(
-                select(self.Author).where(
-                    self.Author.username == kwargs.get("author_username")
-                )
-            ).first()
-            return author
+    def get_author(self, session, **kwargs):
+        author = session.scalars(
+            select(self.Author).where(
+                self.Author.username == kwargs.get("author_username")
+            )
+        ).first()
+        return author
 
     def add_user(self, **kwargs):
         with Session(self.engine) as session:
-            user = self.get_user(**kwargs)
+            user = self.get_user(session, **kwargs)
             if not user:
                 user = self.User(
                     id=kwargs.get("id"),
@@ -95,13 +93,13 @@ class DBase:
 
     def sudscribe_on_author(self, **kwargs):
         with Session(self.engine) as session:
-            user = self.get_user(**kwargs)
+            user = self.get_user(session, **kwargs)
             if not user:
                 return
 
             session.add(user)
 
-            author = self.get_author(**kwargs)
+            author = self.get_author(session, **kwargs)
             if author:
                 if any(map(lambda user: author.id == user.id, user.authors)):
                     return
@@ -136,17 +134,13 @@ class DBase:
 
     def get_authors_list(self, **kwargs):
         with Session(self.engine) as session:
-            user = session.get(self.User, kwargs.get("id"))
+            user = self.get_user(session, **kwargs)
             return [author.username for author in user.authors]
 
     def unsubscribe_author(self, **kwargs):
         with Session(self.engine) as session:
-            author = session.scalars(
-                select(self.Author).where(
-                    self.Author.username == kwargs.get("author_username")
-                )
-            ).first()
-            user = session.get(self.User, kwargs.get("id"))
+            author = self.get_author(session, **kwargs)
+            user = self.get_user(session, **kwargs)
             user.authors.remove(author)
             session.commit()
 
@@ -161,7 +155,5 @@ if __name__ == "__main__":
         "type": "private",
     }
     db.add_user(**roman)
-    user = db.get_user(**roman)
     db.sudscribe_on_author(author_username="kpomak", **roman)
-    author = db.get_author(author_username="kpomak")
     db.unsubscribe_author(author_username="kpomak", **roman)
