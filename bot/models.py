@@ -122,7 +122,6 @@ class DBase:
             user.authors.append(author)
             session.commit()
 
-
     def set_repos(self, author: Author):
         author.repos.clear()
         repos = get_authors_repos(author.username)
@@ -135,15 +134,19 @@ class DBase:
             )
             author.repos.append(repo)
 
-    def get_authors(self, **kwargs):
+    def get_authors_list(self, **kwargs):
         with Session(self.engine) as session:
-            user = self.get_user(**kwargs)
-            return user.authors
+            user = session.get(self.User, kwargs.get("id"))
+            return [author.username for author in user.authors]
 
     def unsubscribe_author(self, **kwargs):
         with Session(self.engine) as session:
-            author = self.get_author(**kwargs)
-            user = self.get_user(**kwargs)
+            author = session.scalars(
+                select(self.Author).where(
+                    self.Author.username == kwargs.get("author_username")
+                )
+            ).first()
+            user = session.get(self.User, kwargs.get("id"))
             user.authors.remove(author)
             session.commit()
 
