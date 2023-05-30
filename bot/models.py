@@ -141,8 +141,12 @@ class DBase:
 
     def unsubscribe_author(self, **kwargs):
         with Session(self.engine) as session:
-            author = self.get_author(**kwargs)
-            user = self.get_user(**kwargs)
+            author = session.scalars(
+                select(self.Author).where(
+                    self.Author.username == kwargs.get("author_username")
+                )
+            ).first()
+            user = session.get(self.User, kwargs.get("id"))
             user.authors.remove(author)
             session.commit()
 

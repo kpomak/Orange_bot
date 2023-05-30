@@ -1,29 +1,35 @@
 from aiogram import Dispatcher
-from aiogram.types import Message
 from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.types import Message, ReplyKeyboardRemove
 
-from bot.models import DBase
-from bot.middleware import handle_file, transcript
-from utils.exceptions import AuthorNotFoundError
 from bot.keyboards import unsubscribe_keyboard
+from bot.middleware import handle_file, transcript
+from bot.models import DBase
+from utils.exceptions import AuthorNotFoundError
 
 db = DBase()
 
 
 # States
-class Form(StatesGroup):
+class SubscribeForm(StatesGroup):
     username = State()  # Will be represented in storage as 'Form:username'
 
 
+class UnsubscribeForm(StatesGroup):
+    username = State()
+
+
+# Handlers
 async def subscribe_welcome(message: Message):
     """
     Conversation entry point
     """
     # Set state
-    await Form.username.set()
+    await SubscribeForm.username.set()
     await message.reply(
-        f"Awesome! 🍊\nWhat's repo owner username?\n Type /cancel for break!"
+        f"Awesome! 🍊\nWhat's repo owners username?\nType /cancel for break!"
     )
 
 
@@ -31,10 +37,28 @@ async def unsubscribe_welcome(message: Message):
     """
     Conversation entry point
     """
+    await UnsubscribeForm.username.set()
     await message.reply(
-        f"Awesome! 🍊\nWhat's repo owner username?\n",
+        f"Awesome! 🍊\nWhich user would you like to unsubscribe from?\n",
         reply_markup=unsubscribe_keyboard(db, **message.from_user.values),
     )
+
+
+async def process_unsubscribe(message: Message, state: FSMContext):
+    """
+    Process username
+    """
+    async with state.proxy() as data:
+        data["author_username"] = message.text
+
+    await state.finish()
+
+    try:
+        db.unsubscribe_author(**message.from_user.values, **data.as_dict())
+    except ValueError:
+        await message.reply(f"User {message.text} not found 👀")
+    else:
+        await message.reply(f"You have been unsubscribe from {message.text}")
 
 
 async def cancel_handler(message: Message, state: FSMContext):
@@ -50,7 +74,7 @@ async def cancel_handler(message: Message, state: FSMContext):
     await message.reply("Cancelled!")
 
 
-async def process_username(message: Message, state: FSMContext):
+async def process_subscribe(message: Message, state: FSMContext):
     """
     Process username
     """
@@ -65,13 +89,13 @@ async def process_username(message: Message, state: FSMContext):
         await message.reply(f"Github user {message.text} not found 👀")
     else:
         await message.reply(f"You have been subscribe to {message.text}")
-        
+
 
 async def echo(message: Message):
     """
     Simple echo handler
     """
-    await message.answer(message.text)
+    await message.answer(message.text, reply_markup=ReplyKeyboardRemove())
 
 
 async def voicy(message: Message):
@@ -114,8 +138,16 @@ def register_all_handlers(dp: Dispatcher):
     dp.register_message_handler(subscribe_welcome, commands=["subscribe"])
     dp.register_message_handler(unsubscribe_welcome, commands=["unsubscribe"])
     dp.register_message_handler(voicy, content_types=["voice"])
-    dp.register_message_handler(cancel_handler, state="*", commands=["cancel"])
-    dp.register_message_handler(process_username, state=Form.username)
+    dp.register_message_handler(
+        cancel_handler,
+        state="*",
+        commands=["cancel"],
+    )
+    # dp.register_message_handler(
+    #     cancel_handler, Text(equals="cancel", ignore_case=True), state="*"
+    # )
+    dp.register_message_handler(process_subscribe, state=SubscribeForm.username)
+    dp.register_message_handler(process_unsubscribe, state=UnsubscribeForm.username)
     dp.register_message_handler(send_welcome, commands=["start"])
     dp.register_message_handler(send_help, commands=["help"])
     dp.register_message_handler(echo)
