@@ -25,7 +25,7 @@ class DBase:
     class User(Base):
         __tablename__ = "users"
         id: Mapped[int] = mapped_column(primary_key=True)
-        username: Mapped[str] = mapped_column(String(255))
+        username: Mapped[Optional[str]] = mapped_column(String(255))
         first_name: Mapped[Optional[str]]
         last_name: Mapped[Optional[str]]
 
@@ -98,14 +98,11 @@ class DBase:
                 return
 
             session.add(user)
-
             author = self.get_author(session, **kwargs)
-            if author:
-                if any(map(lambda user: author.id == user.id, user.authors)):
-                    return
 
-            else:
+            if not author:
                 username = kwargs.get("author_username")
+
                 try:
                     get_author(username)
                 except UnknownObjectException:
@@ -117,20 +114,25 @@ class DBase:
 
                     self.set_repos(author)
 
+            elif any(map(lambda user: author.id == user.id, user.authors)):
+                return
+
             user.authors.append(author)
             session.commit()
 
+    def set_repo(self, item: dict, author: Author):
+        repo = self.Repo(
+            owner=author.id,
+            name=item.get("name"),
+            url=item.get("url"),
+            updated_at=item.get("updated_at"),
+        )
+        author.repos.append(repo)
+
     def set_repos(self, author: Author):
-        author.repos.clear()
         repos = get_authors_repos(author.username)
         for item in repos:
-            repo = self.Repo(
-                owner=author.id,
-                name=item.get("name"),
-                url=item.get("url"),
-                updated_at=item.get("updated_at"),
-            )
-            author.repos.append(repo)
+            self.set_repo(item, author)
 
     def get_authors_list(self, **kwargs):
         with Session(self.engine) as session:
@@ -147,14 +149,29 @@ class DBase:
     def check_updates(self):
         with Session(self.engine) as session:
             updates = []
-            repo = session.get(self.Repo, 1)
-            for user in repo.author.users:
-                update = {
-                    "subscriber": user.id,
-                    "repo": repo.name,
-                    "url": repo.url,
-                }
-                updates.append(update)
+            authors = session.scalars(select(self.Author)).all()
+            for author in authors:
+                repos = get_authors_repos(author.username)
+                for git_repo in repos:
+                    repo_name = git_repo.get("name")
+                    db_repo = session.scalar(
+                        select(self.Repo).where(self.Repo.name == repo_name)
+                    )
+                    if not db_repo:
+                        self.set_repo(git_repo, author)
+                    elif git_repo.get("updated_at") == db_repo.updated_at:
+                        continue
+                    else:
+                        db_repo.updated_at = git_repo.get("updated_at")
+
+                        for user in db_repo.author.users:
+                            update = {
+                                "subscriber": user.id,
+                                "repo": repo_name,
+                                "url": db_repo.url,
+                            }
+                            updates.append(update)
+            session.commit()
             return updates
 
 
