@@ -144,6 +144,19 @@ class DBase:
             user.authors.remove(author)
             session.commit()
 
+    def check_updates(self):
+        with Session(self.engine) as session:
+            updates = []
+            repo = session.get(self.Repo, 1)
+            for user in repo.author.users:
+                update = {
+                    "subscriber": user.id,
+                    "repo": repo.name,
+                    "url": repo.url,
+                }
+                updates.append(update)
+            return updates
+
 
 if __name__ == "__main__":
     db = DBase()

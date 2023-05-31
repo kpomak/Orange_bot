@@ -13,4 +13,9 @@ async def send_message_interval(bot: Bot):
 
 
 async def notify(bot: Bot):
-    users = db.get_users_list()
+    updates = db.check_updates()
+    for update in updates:
+        await bot.send_message(
+            chat_id=update["subscriber"],
+            text=f"Repo {update['repo']} was updated!\n{update['url']}",
+        )
