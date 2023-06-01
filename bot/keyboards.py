@@ -9,6 +9,5 @@ def unsubscribe_keyboard(db, **kwargs):
         keyboard=buttons,
         resize_keyboard=True,
         row_width=1,
-        one_time_keyboard=True,
     )
     return keyboard

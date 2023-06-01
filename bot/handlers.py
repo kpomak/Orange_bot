@@ -77,7 +77,7 @@ async def cancel_handler(message: Message, state: FSMContext):
 
     # Cancel state and inform user about it
     await state.finish()
-    await message.reply("Cancelled!")
+    await message.reply("Cancelled!", reply_markup=ReplyKeyboardRemove())
 
 
 async def process_subscribe(message: Message, state: FSMContext):
@@ -101,7 +101,7 @@ async def echo(message: Message):
     """
     Simple echo handler
     """
-    await message.answer(message.text)
+    await message.answer(message.text, reply_markup=ReplyKeyboardRemove())
 
 
 async def voicy(message: Message):
