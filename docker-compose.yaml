@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./:/bot/
+      - /var/lib/orange:/bot/
     command: bash -c "python3 run.py"
     depends_on:
       db:

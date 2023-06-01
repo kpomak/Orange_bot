@@ -57,9 +57,14 @@ async def process_unsubscribe(message: Message, state: FSMContext):
     try:
         db.unsubscribe_author(**message.from_user.values, **data.as_dict())
     except ValueError:
-        await message.reply(f"User {message.text} not found 👀")
+        await message.reply(
+            f"User {message.text} not found 👀", reply_markup=ReplyKeyboardRemove()
+        )
     else:
-        await message.reply(f"You have been unsubscribe from {message.text}")
+        await message.reply(
+            f"You have been unsubscribe from {message.text}",
+            reply_markup=ReplyKeyboardRemove(),
+        )
 
 
 async def cancel_handler(message: Message, state: FSMContext):
@@ -96,7 +101,7 @@ async def echo(message: Message):
     """
     Simple echo handler
     """
-    await message.answer(message.text, reply_markup=ReplyKeyboardRemove())
+    await message.answer(message.text)
 
 
 async def voicy(message: Message):
