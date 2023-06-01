@@ -8,7 +8,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from bot.config import ENGINE
 from utils.git_api import get_authors_repos, get_author
 from github.GithubException import UnknownObjectException
-from utils.exceptions import AuthorNotFoundError
+from utils.exceptions import AuthorNotFoundError, UserNotFoundError
 
 
 class DBase:
@@ -95,7 +95,7 @@ class DBase:
         with Session(self.engine) as session:
             user = self.get_user(session, **kwargs)
             if not user:
-                return
+                raise UserNotFoundError
 
             session.add(user)
             author = self.get_author(session, **kwargs)

@@ -8,7 +8,7 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from bot.keyboards import unsubscribe_keyboard
 from bot.middleware import handle_file, transcript
 from bot.models import DBase
-from utils.exceptions import AuthorNotFoundError
+from utils.exceptions import AuthorNotFoundError, UserNotFoundError
 
 db = DBase()
 
@@ -91,6 +91,8 @@ async def process_subscribe(message: Message, state: FSMContext):
 
     try:
         db.sudscribe_on_author(**message.from_user.values, **data.as_dict())
+    except UserNotFoundError:
+        await message.reply(f"You should register first! 🤨\nType /start 🍊")
     except AuthorNotFoundError:
         await message.reply(f"Github user {message.text} not found 👀")
     else:
@@ -111,6 +113,8 @@ async def voicy(message: Message):
 
     await handle_file(message=message, file=voice, file_name=file_name, path=path)
     result = await transcript(f"{path}/{file_name}")
+    if not result:
+        result = "I'm sorry! 🍊\nI didn't hear anything! 😔"
     await message.answer(result)
 
 
