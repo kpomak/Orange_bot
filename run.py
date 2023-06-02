@@ -1,14 +1,14 @@
 import asyncio
 
 from bot.core import dp, bot, sheduler
-from utils.ap_shedule import send_message_interval
+from utils.ap_shedule import notify
 
 
 async def main():
-    sheduler.add_job(send_message_interval, "interval", seconds=10, args=(bot,))
+    sheduler.add_job(notify, "interval", seconds=300, args=(bot,))
 
     try:
-        # sheduler.start()
+        sheduler.start()
         await dp.start_polling()
     finally:
         await dp.storage.close()

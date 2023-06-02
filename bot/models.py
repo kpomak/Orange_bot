@@ -8,7 +8,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from bot.config import ENGINE
 from utils.git_api import get_authors_repos, get_author
 from github.GithubException import UnknownObjectException
-from utils.exceptions import AuthorNotFoundError
+from utils.exceptions import AuthorNotFoundError, UserNotFoundError
 
 
 class DBase:
@@ -25,7 +25,7 @@ class DBase:
     class User(Base):
         __tablename__ = "users"
         id: Mapped[int] = mapped_column(primary_key=True)
-        username: Mapped[str] = mapped_column(String(255))
+        username: Mapped[Optional[str]] = mapped_column(String(255))
         first_name: Mapped[Optional[str]]
         last_name: Mapped[Optional[str]]
 
@@ -67,22 +67,20 @@ class DBase:
         self.engine = create_engine(**ENGINE)
         self.Base.metadata.create_all(self.engine)
 
-    def get_user(self, **kwargs):
-        with Session(self.engine) as session:
-            return session.get(self.User, kwargs.get("id"))
+    def get_user(self, session, **kwargs):
+        return session.get(self.User, kwargs.get("id"))
 
-    def get_author(self, **kwargs):
-        with Session(self.engine) as session:
-            author = session.scalars(
-                select(self.Author).where(
-                    self.Author.username == kwargs.get("author_username")
-                )
-            ).first()
-            return author
+    def get_author(self, session, **kwargs):
+        author = session.scalars(
+            select(self.Author).where(
+                self.Author.username == kwargs.get("author_username")
+            )
+        ).first()
+        return author
 
     def add_user(self, **kwargs):
         with Session(self.engine) as session:
-            user = self.get_user(**kwargs)
+            user = self.get_user(session, **kwargs)
             if not user:
                 user = self.User(
                     id=kwargs.get("id"),
@@ -95,19 +93,16 @@ class DBase:
 
     def sudscribe_on_author(self, **kwargs):
         with Session(self.engine) as session:
-            user = self.get_user(**kwargs)
+            user = self.get_user(session, **kwargs)
             if not user:
-                return
+                raise UserNotFoundError
 
             session.add(user)
+            author = self.get_author(session, **kwargs)
 
-            author = self.get_author(**kwargs)
-            if author:
-                if any(map(lambda user: author.id == user.id, user.authors)):
-                    return
-
-            else:
+            if not author:
                 username = kwargs.get("author_username")
+
                 try:
                     get_author(username)
                 except UnknownObjectException:
@@ -119,36 +114,65 @@ class DBase:
 
                     self.set_repos(author)
 
+            elif any(map(lambda user: author.id == user.id, user.authors)):
+                return
+
             user.authors.append(author)
             session.commit()
 
+    def set_repo(self, item: dict, author: Author):
+        repo = self.Repo(
+            owner=author.id,
+            name=item.get("name"),
+            url=item.get("url"),
+            updated_at=item.get("updated_at"),
+        )
+        author.repos.append(repo)
+
     def set_repos(self, author: Author):
-        author.repos.clear()
         repos = get_authors_repos(author.username)
         for item in repos:
-            repo = self.Repo(
-                owner=author.id,
-                name=item.get("name"),
-                url=item.get("url"),
-                updated_at=item.get("updated_at"),
-            )
-            author.repos.append(repo)
+            self.set_repo(item, author)
 
     def get_authors_list(self, **kwargs):
         with Session(self.engine) as session:
-            user = session.get(self.User, kwargs.get("id"))
+            user = self.get_user(session, **kwargs)
             return [author.username for author in user.authors]
 
     def unsubscribe_author(self, **kwargs):
         with Session(self.engine) as session:
-            author = session.scalars(
-                select(self.Author).where(
-                    self.Author.username == kwargs.get("author_username")
-                )
-            ).first()
-            user = session.get(self.User, kwargs.get("id"))
+            author = self.get_author(session, **kwargs)
+            user = self.get_user(session, **kwargs)
             user.authors.remove(author)
             session.commit()
+
+    def check_updates(self):
+        with Session(self.engine) as session:
+            updates = []
+            authors = session.scalars(select(self.Author)).all()
+            for author in authors:
+                repos = get_authors_repos(author.username)
+                for git_repo in repos:
+                    repo_name = git_repo.get("name")
+                    db_repo = session.scalar(
+                        select(self.Repo).where(self.Repo.name == repo_name)
+                    )
+                    if not db_repo:
+                        self.set_repo(git_repo, author)
+                    elif git_repo.get("updated_at") == db_repo.updated_at:
+                        continue
+                    else:
+                        db_repo.updated_at = git_repo.get("updated_at")
+
+                        for user in db_repo.author.users:
+                            update = {
+                                "subscriber": user.id,
+                                "repo": repo_name,
+                                "url": db_repo.url,
+                            }
+                            updates.append(update)
+            session.commit()
+            return updates
 
 
 if __name__ == "__main__":
@@ -161,7 +185,5 @@ if __name__ == "__main__":
         "type": "private",
     }
     db.add_user(**roman)
-    user = db.get_user(**roman)
     db.sudscribe_on_author(author_username="kpomak", **roman)
-    author = db.get_author(author_username="kpomak")
     db.unsubscribe_author(author_username="kpomak", **roman)
