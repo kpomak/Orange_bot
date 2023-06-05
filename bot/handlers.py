@@ -9,6 +9,7 @@ from bot.keyboards import unsubscribe_keyboard
 from bot.middleware import handle_file, transcript
 from bot.models import DBase
 from utils.exceptions import AuthorNotFoundError, UserNotFoundError
+from utils.translator import translator
 
 db = DBase()
 
@@ -103,7 +104,8 @@ async def echo(message: Message):
     """
     Simple echo handler
     """
-    await message.answer(message.text, reply_markup=ReplyKeyboardRemove())
+    translation = translator.translate(message.text)
+    await message.answer(translation.text, reply_markup=ReplyKeyboardRemove())
 
 
 async def voicy(message: Message):
