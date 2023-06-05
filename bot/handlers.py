@@ -105,7 +105,11 @@ async def echo(message: Message):
     Simple echo handler
     """
     translation = translator.translate(message.text)
-    await message.answer(translation.text, reply_markup=ReplyKeyboardRemove())
+    await message.answer(
+        f"```Python\n{translation.text}```",
+        parse_mode="MarkdownV2",
+        reply_markup=ReplyKeyboardRemove(),
+    )
 
 
 async def voicy(message: Message):
