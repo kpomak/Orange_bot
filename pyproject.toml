@@ -19,6 +19,7 @@ pygithub = "1.58.1"
 psycopg2-binary = "2.9.6"
 deepgram-sdk = "2.4.0"
 googletrans = "3.1.0a0"
+bardapi = "^0.1.11"
 
 
 [build-system]

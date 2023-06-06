@@ -4,12 +4,15 @@ from aiogram.dispatcher import FSMContext
 # from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import Message, ReplyKeyboardRemove
+from aiogram.utils.exceptions import CantParseEntities
 
 from bot.keyboards import unsubscribe_keyboard
 from bot.middleware import handle_file, transcript
 from bot.models import DBase
 from utils.exceptions import AuthorNotFoundError, UserNotFoundError
 from utils.translator import translator
+from utils.ai import bard
+from utils.markdown import escape_md
 
 db = DBase()
 
@@ -104,12 +107,25 @@ async def echo(message: Message):
     """
     Simple echo handler
     """
+    await message.answer_chat_action("typing")
     translation = translator.translate(message.text)
-    await message.answer(
-        f"```Python\n{translation.text}```",
-        parse_mode="MarkdownV2",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+    try:
+        answer = bard.get_answer(translation.text).get("content")
+    except Exception:
+        answer = translation.text
+    answer = escape_md(answer)
+    try:
+        await message.answer(
+            answer,
+            parse_mode="MarkdownV2",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+    except CantParseEntities:
+        await message.answer(
+            answer.replace("`", "\`"),
+            parse_mode="MarkdownV2",
+            reply_markup=ReplyKeyboardRemove(),
+        )
 
 
 async def voicy(message: Message):
