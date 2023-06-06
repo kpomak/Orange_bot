@@ -1,9 +1,16 @@
 from typing import List, Optional
 from datetime import datetime
 
-from sqlalchemy.orm import Session
-from sqlalchemy import ForeignKey, Column, Table, String, create_engine, select
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import (
+    ForeignKey,
+    Column,
+    Table,
+    String,
+    BigInteger,
+    create_engine,
+    select,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
 
 from bot.config import ENGINE
 from utils.git_api import get_authors_repos, get_author
@@ -24,7 +31,7 @@ class DBase:
 
     class User(Base):
         __tablename__ = "users"
-        id: Mapped[int] = mapped_column(primary_key=True)
+        id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
         username: Mapped[Optional[str]] = mapped_column(String(255))
         first_name: Mapped[Optional[str]]
         last_name: Mapped[Optional[str]]
