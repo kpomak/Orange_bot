@@ -162,7 +162,9 @@ class DBase:
                 for git_repo in repos:
                     repo_name = git_repo.get("name")
                     db_repo = session.scalar(
-                        select(self.Repo).where(self.Repo.name == repo_name)
+                        select(self.Repo).where(
+                            self.Repo.name == repo_name and self.Repo.author == author
+                        )
                     )
                     if not db_repo:
                         self.set_repo(git_repo, author)
