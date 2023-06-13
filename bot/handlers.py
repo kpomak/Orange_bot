@@ -13,6 +13,7 @@ from utils.exceptions import AuthorNotFoundError, UserNotFoundError
 from utils.translator import translator
 from utils.ai import bard
 from utils.markdown import escape_md
+from utils.http_client import bard_request
 
 db = DBase()
 
@@ -105,14 +106,16 @@ async def process_subscribe(message: Message, state: FSMContext):
 
 async def echo(message: Message):
     """
-    Simple echo handler
+    Complex echo handler
     """
     await message.answer_chat_action("typing")
-    translation = translator.translate(message.text)
+    query = {"content": message.text}
+
+    # translation = translator.translate(message.text)
     try:
-        answer = bard.get_answer(translation.text).get("content")
+        answer = await bard_request(query)
     except Exception:
-        answer = translation.text
+        answer = "Bard has going to sleep 💤"
     answer = escape_md(answer)
     try:
         await message.answer(

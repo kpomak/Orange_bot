@@ -28,3 +28,5 @@ OPTIONS = {
     "punctuate": True,
     "language": "ru",
 }
+
+BARD_URL = "https://fragrant-hill-2781.fly.dev/bard"
