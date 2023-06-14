@@ -1,6 +1,10 @@
+import os
+
 from github import Github
 
-git = Github()
+
+token = os.getenv("GITHUB_TOKEN")
+git = Github(token)
 
 
 def get_authors_repos(username):
