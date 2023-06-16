@@ -5,7 +5,7 @@ from utils.ap_shedule import notify
 
 
 async def main():
-    sheduler.add_job(notify, "interval", seconds=100, args=(bot,))
+    sheduler.add_job(notify, "interval", seconds=15, args=(bot,))
 
     try:
         sheduler.start()
